@@ -76,10 +76,11 @@ def generate_municipality_containers(meta, params, first_day):
     duration = np.int32(np.datetime64('today') - first_day[0])
     t = np.arange(1,duration+1)
 
-    I_sym = first_day[1]
-    N = meta[0]['Pt'] - I_sym
+    N = meta[0]['Pt']
+    I_sym = first_day[1]/N
 
-    vars0 = (N, 0, 0, I_sym, 0, 0, 0, 0, 0)
+
+    vars0 = (1-I_sym, 0, 0, I_sym, 0, 0, 0, 0, 0)
 
     par = [params[k] for k in ['beta1', 'beta2', 'delta', 'h', 'ksi', 't_thresh', 'kappa', 'p', 'gamma_asym', 'gamma_sym', 'gamma_H', 'gamma_U', 'mi_H', 'mi_U', 'omega']]
 
@@ -88,7 +89,7 @@ def generate_municipality_containers(meta, params, first_day):
 
     res = spi.odeint(ode, vars0, t, args=tuple(par))
 
-    return res[-1]
+    return res[-1]*N # denormalizing containers
 
 
 def get_muni_time_series():
