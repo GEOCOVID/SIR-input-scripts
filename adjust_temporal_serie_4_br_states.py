@@ -72,6 +72,8 @@ def stipulation(observed, meta):
     N, _      = meta # unpacking state metadata
     thresh_ub = len(observed[0]) # last day of time series
 
+    # thrs -> ini + 5, fin - 5
+
     boundaries = np.array([
         [.0,        1.], # beta1
         [.0,        1.], # beta2
