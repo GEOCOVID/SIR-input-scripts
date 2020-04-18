@@ -329,10 +329,7 @@ def main():
             res.append(que.get())
 
         a = sum([tt.is_alive() for tt in tts])
-        if a:
-            print(f'tem thread ativa! {a}')
-        else:
-            break
+        if not a: break
         time.sleep(2)
 
 
