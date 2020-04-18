@@ -203,7 +203,7 @@ def plot_english(t, y, params, observed, meta):
     l = np.int32(np.floor(np.linspace(0, dates.size-1, 10)))
     plt.xticks(t[l], dates[l], rotation=45, rotation_mode='anchor', ha='right')
 
-    outpath = f'output/{state}'
+    outpath = f'{out_folder()}/{state}'
     mkdir_p([outpath])
     plt.savefig(f'{outpath}/english.svg',dpi=600)
 
@@ -239,7 +239,7 @@ def plot_portuguese(t, y, params, observed, meta):
     l = np.int32(np.floor(np.linspace(0, dates.size-1, 10)))
     plt.xticks(t[l], dates[l], rotation=45, rotation_mode='anchor', ha='right')
 
-    outpath = f'output/{state}'
+    outpath = f'{out_folder()}/{state}'
     mkdir_p([outpath])
     plt.savefig(f'{outpath}/portuguese.svg',dpi=600)
 
@@ -265,11 +265,15 @@ def param_df_out(df, observations):
 
     last_day = observations['BR'][0][-1] # getting last date
 
-    outpath = f'output/'
+    outpath = f'{out_folder()}/'
     mkdir_p([f'{outpath}'])
 
     df.set_index('state', inplace=True)
     df.to_csv(f'{outpath}/states_summary_{last_day}.csv')
+
+
+def out_folder():
+    return f'output/{np.datetime64("today")}'
 
 
 def main():
