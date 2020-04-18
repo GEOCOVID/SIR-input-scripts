@@ -1,5 +1,6 @@
 # import concurrent.futures as cf
 # import threading
+import time
 import multiprocessing as mp
 from xonsh_py import *
 import pandas as pd
@@ -49,12 +50,9 @@ def ode_initial_conditions(params):
 def cost_function(params, observed, meta, t, predef_param):
 
     N = meta[0] # unpacking state metadata
-
-    vars0 = ode_initial_conditions(params) # getting ode random initial conditions
-
-    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
-
-    res = spi.odeint(ode, vars0, t, args=tuple(params))
+    
+    # getting containers
+    res = get_containers(params, predef_param, observed, meta, t)
 
     I_stipulated = res[1:,-1] # getting all integrated time series for Infections
     D_stipulated = res[1:,-2] # getting all integrated time series for Deaths
@@ -119,11 +117,21 @@ def stipulation(thr, observed, meta):
             best_params = res.x
             # print(f'[{thr}]:{meta[2]}/{meta[3]} Found cost {best_cost} with params:\n{best_params}\n')
 
-            # if best_cost < 50: break
 
-        # if tries % 250 == 0 and not tries == 0: print(f'Tried {tries} times...')
+    # getting containers
+    containers = get_containers(best_params, predef_param, observed, meta, t)
 
-    return best_params, predef_param, best_cost
+    return best_params, predef_param, best_cost, containers[-1]
+
+def get_containers(params, predef_param, observed, meta, t):
+
+    vars0 = ode_initial_conditions(params) # getting ode random initial conditions
+
+    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
+
+    res = spi.odeint(ode, vars0, t, args=tuple(params))
+
+    return res
 
 
 def observed_data():
@@ -259,22 +267,11 @@ def plot_portuguese(t, y, params, observed, meta):
     plt.close(fig)
 
 
-def param_df_create():
-    df = pd.DataFrame(columns=['ibgeID','city','state','population','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','best_cost'])
+def param_df_out(data, observations, cities):
 
-    return df
+    data = np.vstack(data)
 
-
-def param_df_app(params, predef_param, best_cost, meta, df):
-
-    N, id, city, state = meta # unpacking state metadata
-
-    data = np.concatenate(([id, city, state], [N], params[:-3], predef_param, params[-3:], [best_cost]))
-    cols = df.columns
-
-    return df.append(dict(zip(cols,data)), ignore_index=True)
-
-def param_df_out(df, observations, cities):
+    df = pd.DataFrame(data, columns=['ibgeID','city','state','population','best_cost','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','S','E','I_asym','I_sym','H','U','R','D','Nw'])
 
     id = cities[0] # getting any city (suposing everyone has the same last date)
     last_day = observations[id][0][-1] # getting last date
@@ -299,9 +296,7 @@ def out_folder():
     return f'output/{np.datetime64("today")}'
 
 
-def hard_work(thr, cities, city_meta, observed):
-
-    par_df = param_df_create()
+def hard_work(q, thr, cities, city_meta, observed):
 
     c = 0; tot = len(cities)
     # stipulation per state
@@ -309,13 +304,21 @@ def hard_work(thr, cities, city_meta, observed):
         c+=1
         print(f'{thr}:[{c}/{tot}] Started {city}, {city_meta[city][2]}/{city_meta[city][3]}...\n')
 
-        params, predef_param, best_cost = stipulation(thr, observed[city], city_meta[city])
+        params, predef_param, best_cost, containers = stipulation(thr, observed[city], city_meta[city])
 
         plot_compare(params, predef_param, observed[city], city_meta[city])
 
-        par_df = param_df_app(params, predef_param, best_cost, city_meta[city], par_df)
+        # adding numpy row to queue
+        q.put(return_put(params, predef_param, best_cost, containers, city_meta[city]))
 
-    return par_df
+
+def return_put(params, predef_param, best_cost, containers, meta):
+
+    N, id, city, state = meta # unpacking state metadata
+
+    data = np.concatenate(([id, city, state, N, best_cost], params[:-3], predef_param, params[-3:], containers))
+
+    return data
 
 
 def main():
@@ -327,6 +330,7 @@ def main():
     # TODO: verify if there are unmatching state keys between previous dictionaries
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
+    cities = cities[:6]
     tot = cities.shape[0]
     print(f'{tot} cities to be processed...\n')
 
@@ -336,29 +340,42 @@ def main():
 
     tts = []
     que = mp.Queue()
-    for i in range(n_thread):
-        if i < r:
-            beg = i*(l+1)
+    for thr in range(n_thread):
+        if thr < r:
+            beg = thr*(l+1)
             end = beg + l + 1
         else:
-            beg = i*l + r
+            beg = thr*l + r
             end = beg + l
 
-        tt = mp.Process(target=lambda q, arg: q.put(hard_work(*arg)), args=(que, (i, cities[beg:end], city_meta, observed)))
+        tt = mp.Process(target=hard_work, args=(que, thr, cities[beg:end], city_meta, observed))
 
         tts.append(tt)
         tt.start()
+
+
+    # concat each thread work
+    res = []
+    # while not que.empty():
+    #     res.append(que.get())
+    while True:
+        if not que.empty():
+            res.append(que.get())
+
+        a = sum([tt.is_alive() for tt in tts])
+        if a:
+            print(f'tem thread ativa! {a}')
+        else:
+            break
+        time.sleep(2)
+
 
     for tt in tts:
         tt.join()
         tt.close()
 
-    # concat each thread work
-    res = []
-    while not que.empty():
-        res.append(que.get())
-
     # outputing state parameters
-    param_df_out(pd.concat(res), observed, cities)
+    param_df_out(res, observed, cities)
+
 
 main()
