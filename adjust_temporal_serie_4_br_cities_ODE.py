@@ -117,7 +117,7 @@ def stipulation(thr, observed, meta):
         if res.status > 0 and best_cost > res.cost: # accepting only better converged parameters
             best_cost   = res.cost
             best_params = res.x
-            print(f'[{thr}]:{meta[2]}/{meta[3]} Found cost {best_cost} with params:\n{best_params}\n')
+            # print(f'[{thr}]:{meta[2]}/{meta[3]} Found cost {best_cost} with params:\n{best_params}\n')
 
             # if best_cost < 50: break
 
