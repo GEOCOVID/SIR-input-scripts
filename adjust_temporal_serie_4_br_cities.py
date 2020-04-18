@@ -297,7 +297,6 @@ def main():
     # TODO: verify if there are unmatching state keys between previous dictionaries
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
-    cities = cities[:1]
     tot = cities.shape[0]
     print(f'{tot} cities to be processed...\n')
 
