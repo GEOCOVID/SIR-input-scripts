@@ -50,7 +50,7 @@ def ode_initial_conditions(params):
 def cost_function(params, observed, meta, t, predef_param):
 
     N = meta[0] # unpacking state metadata
-    
+
     # getting containers
     res = get_containers(params, predef_param, observed, meta, t)
 
@@ -121,7 +121,7 @@ def stipulation(thr, observed, meta):
     # getting containers
     containers = get_containers(best_params, predef_param, observed, meta, t)
 
-    return best_params, predef_param, best_cost, containers[-1]
+    return best_params, predef_param, best_cost, containers
 
 def get_containers(params, predef_param, observed, meta, t):
 
@@ -177,23 +177,12 @@ def city_metadata():
     return metadata
 
 
-def plot_compare(params, predef_param, observed, meta):
-
-    vars0 = ode_initial_conditions(params) # getting ode random initial conditions
-
-    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
-
-    t = np.arange(0,1+len(observed[0])) # timespan based on days length
-
-    y = spi.odeint(ode, vars0, t, args=tuple(params))[1:]
-
-    plot_english(t, y, params, observed, meta)
-    plot_portuguese(t, y, params, observed, meta)
-
-
-def plot_english(t, y, params, observed, meta):
+def plot_compare(params, predef_param, containers, observed, meta):
 
     N, _, city, state = meta # unpacking state metadata
+
+    t = np.arange(1,1+len(observed[0])) # timespan based on days length
+    y = containers[1:]
 
     deaths = np.nonzero(observed[1])[0]
     ini = deaths[0] if len(deaths) else -1
@@ -204,64 +193,41 @@ def plot_english(t, y, params, observed, meta):
 
     # plotting Deaths
     if ini > 0:
-        plt.plot(t[1+ini:], N*y[ini:,-2], '-r', label='Stipulated Death', lw=1)
-        plt.plot(t[1+ini:], observed[1][ini:], '.k', label='Observed Death', ms=5)
+        od, = plt.plot(t[ini:], observed[1][ini:], 'D', c='#f47f18', label='Observed Death', ms=6)
+        sd, = plt.plot(t[ini:], N*y[ini:,-2], '-r', label='Stipulated Death', lw=1)
 
-    plt.plot(t[1:], N*y[:,-1], '-b', label='Stipulated Infection', lw=1)
-    plt.plot(t[1:], observed[3], '.k', label='Observed Infection', ms=5)
+    si, = plt.plot(t, N*y[:,-1], '-b', label='Stipulated Infection', lw=1)
+    oi, = plt.plot(t, observed[3], '.k', label='Observed Infection', ms=5)
 
-    plt.axvline(params[5], c='r', ls='--', label='Start of Intervention')
+    vl = plt.axvline(params[5], c='r', ls='--', label='Start of Intervention')
 
     plt.legend(loc='upper left', fontsize=10)
 
     plt.xlabel('Date', fontsize=17)
     plt.ylabel('Reported cases', fontsize=17)
 
-    plt.suptitle(f'Covid-19 - {city}/{state}')
+    plt.title(f'Covid-19 - {city}/{state}')
 
     l = np.int32(np.floor(np.linspace(0, dates.size-1, 10)))
     plt.xticks(t[l], dates[l], rotation=45, rotation_mode='anchor', ha='right')
+    plt.tight_layout()
 
     outpath = f'{out_folder()}/{state}/{city}'
     mkdir_p([outpath])
     plt.savefig(f'{outpath}/english.svg',dpi=600)
 
-    plt.close(fig)
-
-
-def plot_portuguese(t, y, params, observed, meta):
-
-    N, _, city, state = meta # unpacking state metadata
-
-    deaths = np.nonzero(observed[1])[0]
-    ini = deaths[0] if len(deaths) else -1
-    dates = observed[0]
-
-    # plot step
-    fig = plt.figure(0)
-
+    # relabeling in portuguese
     # plotting Deaths
     if ini > 0:
-        plt.plot(t[1+ini:], N*y[ini:,-2], '-r', label='Mortes Estipuladas', lw=1)
-        plt.plot(t[1+ini:], observed[1][ini:], '.k', label='Mortes Reportadas', ms=5)
-
-    plt.plot(t[1:], N*y[:,-1], '-b', label='Infecções Estipuladas', lw=1)
-    plt.plot(t[1:], observed[3], '.k', label='Infecções Reportadas', ms=5)
-
-    plt.axvline(params[5], c='r', ls='--', label='Início da Intervenção')
-
+        sd.set_label('Mortes Estipuladas')
+        od.set_label('Mortes Reportadas')
+    si.set_label('Infecções Estipuladas')
+    oi.set_label('Infecções Reportadas')
+    vl.set_label('Início da Intervenção')
     plt.legend(loc='upper left', fontsize=10)
-
     plt.xlabel('Data', fontsize=17)
     plt.ylabel('Casos Reportados', fontsize=17)
-
-    plt.suptitle(f'Covid-19 - {city}/{state}')
-
-    l = np.int32(np.floor(np.linspace(0, dates.size-1, 10)))
-    plt.xticks(t[l], dates[l], rotation=45, rotation_mode='anchor', ha='right')
-
-    outpath = f'{out_folder()}/{state}/{city}'
-    mkdir_p([outpath])
+    plt.title(f'Covid-19 - {city}/{state}')
     plt.savefig(f'{outpath}/portuguese.svg',dpi=600)
 
     plt.close(fig)
@@ -304,12 +270,13 @@ def hard_work(q, thr, cities, city_meta, observed):
         c+=1
         print(f'{thr}:[{c}/{tot}] Started {city}, {city_meta[city][2]}/{city_meta[city][3]}...\n')
 
+        # TODO: reuse full "containers" time serie in plot_compare so don't need to recompute odeint again
         params, predef_param, best_cost, containers = stipulation(thr, observed[city], city_meta[city])
 
-        plot_compare(params, predef_param, observed[city], city_meta[city])
+        plot_compare(params, predef_param, containers, observed[city], city_meta[city])
 
         # adding numpy row to queue
-        q.put(return_put(params, predef_param, best_cost, containers, city_meta[city]))
+        q.put(return_put(params, predef_param, best_cost, containers[-1], city_meta[city]))
 
 
 def return_put(params, predef_param, best_cost, containers, meta):
@@ -330,7 +297,7 @@ def main():
     # TODO: verify if there are unmatching state keys between previous dictionaries
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
-    cities = cities[:6]
+    cities = cities[:1]
     tot = cities.shape[0]
     print(f'{tot} cities to be processed...\n')
 
