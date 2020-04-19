@@ -62,8 +62,8 @@ def cost_function(params, observed, meta, t, predef_param):
 
 
     # getting temporal deviations for specific populations
-    err_I = (N*I_stipulated-I_observed)/np.sqrt(N*I_stipulated+1)
-    err_D = (N*D_stipulated-D_observed)/np.sqrt(N*D_stipulated+1)
+    err_I = (I_stipulated-I_observed)/np.sqrt(I_stipulated+1)
+    err_D = (D_stipulated-D_observed)/np.sqrt(D_stipulated+1)
 
     return np.r_[err_I, err_D]
 
@@ -71,35 +71,38 @@ def cost_function(params, observed, meta, t, predef_param):
 def stipulation(thr, observed, meta):
 
     N = meta[0] # unpacking state metadata
-    thresh_ub = len(observed[0]) # last day of time series
+    t_lth = observed[4] # getting time series length
 
     # thrs -> ini + 5, fin - 5
+    m = (5, 5) # margins after beginning and before today for intervention fitting
+    if t_lth-sum(m) < 0:
+        m = (m[0]+(t_lth-sum(m)-.01) , m[1]) # shifting lower bound to fit inside time interval. upper bound remain intact
 
     boundaries = np.array([
-        [.0,        1.], # beta1
-        [.0,        1.], # beta2
-        [.0,        1.], # delta
-        [.0,       .15], # ha
-        [.2,        .5], # ksi
-        [ 1, thresh_ub], # t_thresh
-        [0.,     10./N], # I_asym --> Initial Condition !!
-        [0.,     10./N], # I_sym  --> Initial Condition !!
-        [0.,     10./N]  # E      --> Initial Condition !!
+        [.0,           1.], # beta1
+        [.0,           1.], # beta2
+        [.0,          1.5], # delta
+        [.05,          .2], # ha
+        [.48,         .53], # ksi
+        [m[0], t_lth-m[1]], # t_thresh
+        [0.,        10./N], # I_asym --> Initial Condition !!
+        [0.,        10./N], # I_sym  --> Initial Condition !!
+        [0.,        10./N]  # E      --> Initial Condition !!
     ]).T
 
     predef_param = (
         .25,   # kappa
         .15,   # p
-        .2,    # gamma_asym
-        .2,    # gamma_sym
-        .1,    # gamma_H
-        .1,    # gamma_U
-        .2,    # mi_H
-        .55,   # mi_U
-        .04    # omega
+        1/3.5, # gamma_asym
+        .25,   # gamma_sym
+        1/9,   # gamma_H
+        1/5.5, # gamma_U
+        .15,   # mi_H
+        .35,   # mi_U
+        .14    # omega
     )
 
-    t = np.arange(0,1+len(observed[0])) # timespan based on days length
+    t = np.arange(0,1+t_lth) # timespan based on days length
 
     best_cost   = np.inf  # holding minimized cost set of parameters
     best_params = (None,) # tuple holding set of best parameters
@@ -125,13 +128,15 @@ def stipulation(thr, observed, meta):
 
 def get_containers(params, predef_param, observed, meta, t):
 
+    N = meta[0] # getting city population
+
     vars0 = ode_initial_conditions(params) # getting ode random initial conditions
 
     params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
 
     res = spi.odeint(ode, vars0, t, args=tuple(params))
 
-    return res
+    return res*N
 
 
 def observed_data():
@@ -155,6 +160,7 @@ def observed_data():
             city_lines.deaths.values,     # [1] -> deaths     vector
             city_lines.newCases.values,   # [2] -> newCases   vector
             city_lines.totalCases.values, # [3] -> totalCases vector
+            city_lines.shape[0]           # [4] -> length of time series
         )
 
     return cities
@@ -194,9 +200,9 @@ def plot_compare(params, predef_param, containers, observed, meta):
     # plotting Deaths
     if ini > 0:
         od, = plt.plot(t[ini:], observed[1][ini:], 'D', c='#f47f18', label='Observed Death', ms=6)
-        sd, = plt.plot(t[ini:], N*y[ini:,-2], '-r', label='Stipulated Death', lw=1)
+        sd, = plt.plot(t[ini:], y[ini:,-2], '-r', label='Stipulated Death', lw=1)
 
-    si, = plt.plot(t, N*y[:,-1], '-b', label='Stipulated Infection', lw=1)
+    si, = plt.plot(t, y[:,-1], '-b', label='Stipulated Infection', lw=1)
     oi, = plt.plot(t, observed[3], '.k', label='Observed Infection', ms=5)
 
     vl = plt.axvline(params[5], c='r', ls='--', label='Start of Intervention')
@@ -237,7 +243,7 @@ def param_df_out(data, observations, cities):
 
     data = np.vstack(data)
 
-    df = pd.DataFrame(data, columns=['ibgeID','city','state','population','best_cost','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','S','E','I_asym','I_sym','H','U','R','D','Nw'])
+    df = pd.DataFrame(data, columns=['ibgeID','city','state','population','series_length','best_cost','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','S','E','I_asym','I_sym','H','U','R','D','Nw'])
 
     id = cities[0] # getting any city (suposing everyone has the same last date)
     last_day = observations[id][0][-1] # getting last date
@@ -248,6 +254,15 @@ def param_df_out(data, observations, cities):
     df.set_index('ibgeID', inplace=True)
     df.sort_index(inplace=True)
     df.to_csv(f'{outpath}/cities_summary_{last_day}.csv')
+
+
+def return_put(params, predef_param, best_cost, containers, meta, t_lth):
+
+    N, id, city, state = meta # unpacking state metadata
+
+    data = np.concatenate(([id, city, state, N, t_lth, best_cost], N*params[:-3], predef_param, params[-3:], containers))
+
+    return data
 
 
 def get_last_date(path, wild):
@@ -270,22 +285,12 @@ def hard_work(q, thr, cities, city_meta, observed):
         c+=1
         print(f'{thr}:[{c}/{tot}] Started {city}, {city_meta[city][2]}/{city_meta[city][3]}...\n')
 
-        # TODO: reuse full "containers" time serie in plot_compare so don't need to recompute odeint again
         params, predef_param, best_cost, containers = stipulation(thr, observed[city], city_meta[city])
 
         plot_compare(params, predef_param, containers, observed[city], city_meta[city])
 
         # adding numpy row to queue
-        q.put(return_put(params, predef_param, best_cost, containers[-1], city_meta[city]))
-
-
-def return_put(params, predef_param, best_cost, containers, meta):
-
-    N, id, city, state = meta # unpacking state metadata
-
-    data = np.concatenate(([id, city, state, N, best_cost], params[:-3], predef_param, params[-3:], containers))
-
-    return data
+        q.put(return_put(params, predef_param, best_cost, containers[-1], city_meta[city], observed[city][4]))
 
 
 def main():
@@ -297,6 +302,8 @@ def main():
     # TODO: verify if there are unmatching state keys between previous dictionaries
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
+    cities = cities[:11]
+    cities = np.array([2927408])
     tot = cities.shape[0]
     print(f'{tot} cities to be processed...\n')
 
