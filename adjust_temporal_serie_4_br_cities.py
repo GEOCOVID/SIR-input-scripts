@@ -19,7 +19,7 @@ def beta_fun(t, t_thresh, beta1, beta2):
 
 def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
 
-    S, E, I_asym, I_sym, H, U, R, D, Nw = vars # getting variables values
+    S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
 
     beta = beta_fun(t, t_thresh, beta1, beta2)
 
@@ -33,18 +33,31 @@ def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, g
     dD = mi_H*gamma_H*H + mi_U*gamma_U*U
     dNw = p*kappa*E
 
-    return [dS, dE, dI_asym, dI_sym, dH, dU, dR, dD, dNw]
+    return [dS, dI_asym, dI_sym, dE, dH, dU, dR, dD, dNw]
 
 
 def ode_initial_conditions(params):
 
     # ---------  Signature of variables unpacked by ode
-    # S, E, I_asym, I_sym, H, U, R, D, Nw = vars # getting variables values
+    # S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
 
     vars0 = params[-3:]
     vars0 = np.concatenate(([1-np.sum(vars0)], vars0, [0, 0, 0, 0, 0])) # prepending resulting Susceptible & appending lasting containers: Hospitalized, UTI, Recovered, and Dead, respectively; and Nw inital value
 
     return vars0
+
+
+def get_containers(params, predef_param, observed, meta, t):
+
+    N = meta[0] # getting city population
+
+    vars0 = ode_initial_conditions(params) # getting ode random initial conditions
+
+    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
+
+    res = spi.odeint(ode, vars0, t, args=tuple(params))
+
+    return res*N
 
 
 def cost_function(params, observed, meta, t, predef_param):
@@ -126,18 +139,6 @@ def stipulation(thr, observed, meta):
 
     return best_params, predef_param, best_cost, containers
 
-def get_containers(params, predef_param, observed, meta, t):
-
-    N = meta[0] # getting city population
-
-    vars0 = ode_initial_conditions(params) # getting ode random initial conditions
-
-    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
-
-    res = spi.odeint(ode, vars0, t, args=tuple(params))
-
-    return res*N
-
 
 def observed_data():
 
@@ -190,6 +191,8 @@ def plot_compare(params, predef_param, containers, observed, meta):
     t = np.arange(1,1+len(observed[0])) # timespan based on days length
     y = containers[1:]
 
+    # np.savetxt('TESTE.csv', containers, delimiter=',', newline='\n', header='S,I_A,I_S,E,H,U,R,D,Nw', fmt=['%d','%d','%d','%d','%d','%d','%d','%d','%d'])
+
     deaths = np.nonzero(observed[1])[0]
     ini = deaths[0] if len(deaths) else -1
     dates = observed[0]
@@ -199,15 +202,24 @@ def plot_compare(params, predef_param, containers, observed, meta):
 
     # plotting Deaths
     if ini > 0:
-        od, = plt.plot(t[ini:], observed[1][ini:], 'D', c='#f47f18', label='Observed Death', ms=6)
+        od, = plt.plot(t[ini:], observed[1][ini:], 'o', mfc='none', mec='#f47f18', label='Observed Death', ms=4, mew=1.)
         sd, = plt.plot(t[ini:], y[ini:,-2], '-r', label='Stipulated Death', lw=1)
 
     si, = plt.plot(t, y[:,-1], '-b', label='Stipulated Infection', lw=1)
     oi, = plt.plot(t, observed[3], '.k', label='Observed Infection', ms=5)
 
+
+    # r, = plt.plot(t, y[:,-3], '-g', label='Stipulated Recovery', lw=1)
+    # u, = plt.plot(t, y[:,-4], '-', c='#98b7e2', label='Stipulated UTI', lw=1)
+    # h, = plt.plot(t, y[:,-5], '-', c='#ed84b8', label='Stipulated Hospitalization', lw=1)
+    # e, = plt.plot(t, y[:,-6], '-', c='#25f9ef', label='Stipulated Exposed', lw=1)
+    # i, = plt.plot(t, y[:,-7], '-k', label='Stipulated Symptomatic', lw=1)
+    # a, = plt.plot(t, y[:,-8], '-y', label='Stipulated Asymptomatic', lw=1)
+    # s, = plt.plot(t, y[:,-9], '-', c='#f925eb', label='Stipulated Susceptible', lw=1)
+
     vl = plt.axvline(params[5], c='r', ls='--', label='Start of Intervention')
 
-    plt.legend(loc='upper left', fontsize=10)
+    plt.legend(loc='upper left', fontsize=5)
 
     plt.xlabel('Date', fontsize=17)
     plt.ylabel('Reported cases', fontsize=17)
@@ -243,7 +255,7 @@ def param_df_out(data, observations, cities):
 
     data = np.vstack(data)
 
-    df = pd.DataFrame(data, columns=['ibgeID','city','state','population','series_length','best_cost','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','S','E','I_asym','I_sym','H','U','R','D','Nw'])
+    df = pd.DataFrame(data, columns=['ibgeID','city','state','population','series_length','best_cost','beta1','beta2','delta','h','ksi','t_thresh','kappa','p','gamma_asym','gamma_sym','gamma_H','gamma_U','mi_H','mi_U','omega','initial_I_asym','initial_I_sym','initial_E','S','I_asym','I_sym','E','H','U','R','D','Nw'])
 
     id = cities[0] # getting any city (suposing everyone has the same last date)
     last_day = observations[id][0][-1] # getting last date
@@ -329,8 +341,6 @@ def main():
 
     # concat each thread work
     res = []
-    # while not que.empty():
-    #     res.append(que.get())
     while True:
         if not que.empty():
             res.append(que.get())
