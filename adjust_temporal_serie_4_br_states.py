@@ -94,7 +94,7 @@ def stipulation(thr, extra_days, observed, meta):
     boundaries = np.array([
         [.0,           1.], # beta1
         [.0,           1.], # beta2
-        [.0,          1.5], # delta
+        [.0,           1.], # delta
         [.05,          .2], # ha
         [.48,         .53], # ksi
         [m[0], t_lth-m[1]], # t_thresh
@@ -107,7 +107,7 @@ def stipulation(thr, extra_days, observed, meta):
         .25,   # kappa
         .15,   # p
         1/3.5, # gamma_asym
-        .25,   # gamma_sym
+        1/6,   # gamma_sym
         1/9,   # gamma_H
         1/5.5, # gamma_U
         .15,   # mi_H
@@ -288,7 +288,7 @@ def return_put(params, predef_param, best_cost, containers, meta, t_lth):
 
     N, state = meta # unpacking state metadata
 
-    data = np.concatenate(([state, N, t_lth, best_cost], N*params[:-3], predef_param, params[-3:], containers))
+    data = np.concatenate(([state, N, t_lth, best_cost], params[:-3], predef_param, params[-3:], containers))
 
     return data
 
@@ -333,7 +333,7 @@ def main():
     # TODO: verify if there are unmatching state keys between previous dictionaries
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
-    # cities = np.array(['BA'])
+    cities = np.array(['BA'])
     tot = cities.shape[0]
     print(f'{tot} states to be processed...\n')
 
