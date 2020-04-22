@@ -1,8 +1,8 @@
 /*
+/*__pycache__*
 
 !.gitignore
 !*.py
-!src/
 !src/*.py
 !metadata/*
 
