@@ -2,3 +2,7 @@
 
 !.gitignore
 !*.py
+!src/
+!src/*.py
+!metadata/*
+
