@@ -3,12 +3,15 @@ import scipy.integrate as spi
 import scipy.optimize as spo
 
 
-def beta_fun(t, t_thresh, beta1, beta2):
-    k = 50. # code defined variable...
-    hh = lambda t: 1./(1.+np.exp(-2.*k*t, dtype=np.float128))
-    return beta1*hh(t_thresh-t) + beta2*hh(t-t_thresh)
+# def beta_fun(t, t_thresh, beta1, beta2):
+#     k = 50. # code defined variable...
+#     hh = lambda t: 1./(1.+np.exp(-2.*k*t, dtype=np.float128))
+#     return beta1*hh(t_thresh-t) + beta2*hh(t-t_thresh)
+def beta_fun(t, t_thresh, beta1, beta2): # trying to avoid numpy overflow
+    return beta1 if t < t_thresh else beta2
 
-def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
+# def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
+def ode(vars, t, beta1, beta2, delta, kappa, p, gamma_asym, gamma_sym, ha, gamma_H, gamma_U, t_thresh, ksi, mi_H, mi_U, omega_H):
 
     S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
 
@@ -19,9 +22,12 @@ def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, g
     dI_asym = (1-p)*kappa*E - gamma_asym*I_asym
     dI_sym = p*kappa*E - gamma_sym*I_sym
     dH = ha*ksi*gamma_sym*I_sym + (1-mi_U)*gamma_U*U - gamma_H*H
-    dU = ha*(1-ksi)*gamma_sym*I_sym + (1-mi_H)*omega*gamma_H*H - gamma_U*U
-    dR = gamma_asym*I_asym + (1-mi_H)*(1-omega)*gamma_H*H + (1-ha)*gamma_sym*I_sym
-    dD = mi_H*gamma_H*H + mi_U*gamma_U*U
+    # dU = ha*(1-ksi)*gamma_sym*I_sym + (1-mi_H)*omega*gamma_H*H - gamma_U*U
+    dU = ha*(1-ksi)*gamma_sym*I_sym + omega_H*gamma_H*H - gamma_U*U
+    # dR = gamma_asym*I_asym + (1-mi_H)*(1-omega)*gamma_H*H + (1-ha)*gamma_sym*I_sym
+    dR = gamma_asym*I_asym + (1-mi_H)*(1-omega_H)*gamma_H*H + (1-ha)*gamma_sym*I_sym
+    # dD = mi_H*gamma_H*H + mi_U*gamma_U*U
+    dD = (1-omega_H)*mi_H*gamma_H*H + mi_U*gamma_U*U
     dNw = p*kappa*E
 
     return [dS, dI_asym, dI_sym, dE, dH, dU, dR, dD, dNw]
@@ -53,8 +59,6 @@ def get_containers(params, predef_param, observed, meta, t):
 
 def cost_function(params, observed, meta, t, predef_param):
 
-    N = meta['pop'] # unpacking state metadata
-
     # getting containers
     res = get_containers(params, predef_param, observed, meta, t)
 
@@ -84,9 +88,16 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
     boundaries = np.array([
         [.0,           1.], # beta1
         [.0,           1.], # beta2
-        [.0,           1.], # delta
-        [.05,          .2], # ha
-        [.48,         .53], # ksi
+        # [.0,           1.], # delta
+        [.0,           .7], # delta
+        [1/6,         1/3], # kappa
+        [.13,          .5], # p
+        [1/3.7,    1/3.24], # gamma_asym
+        [1/5,         1/3], # gamma_sym
+        [.05,         .25], # ha
+        # [1-.35,     1-.01], # ksi
+        [1/12,        1/4], # gamma_H
+        [1/12,        1/4], # gamma_U
         [m[0], t_lth-m[1]], # t_thresh
         [0.,        10./N], # I_asym --> Initial Condition !!
         [0.,        10./N], # I_sym  --> Initial Condition !!
@@ -94,15 +105,16 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
     ]).T
 
     predef_param = (
-        .25,   # kappa
-        .15,   # p
-        1/3.5, # gamma_asym
-        1/6,   # gamma_sym
-        1/9,   # gamma_H
-        1/5.5, # gamma_U
-        .15,   # mi_H
+        # .25,   # kappa
+        # .15,   # p
+        # 1/3.5, # gamma_asym
+        # 1/6,   # gamma_sym
+        .5,    # ksi
+        # 1/9,   # gamma_H
+        # 1/5.5, # gamma_U
+        .1125, # mi_H
         .35,   # mi_U
-        .14    # omega
+        .14    # omega_H
     )
 
     t = np.arange(0,1+t_lth) # timespan based on days length

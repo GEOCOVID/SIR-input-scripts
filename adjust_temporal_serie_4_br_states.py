@@ -3,8 +3,7 @@ from src.input import observed_data, city_metadata
 from src.parallel import parallelizer
 from src.output import param_df_out
 from sys import exit
-import sys
-np.set_printoptions(threshold=sys.maxsize)
+
 
 def main():
 

@@ -12,11 +12,9 @@ def main():
     city_meta = city_metadata('metadata', 'popBR_', 1, False)
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
-    # cities = cities[:11]
-    cities = np.array([2927408])
-    # cities = np.array([4305454])
+    # cities = np.array([2927408])
 
-    n_thread = 1
+    n_thread = 4
     extra_days = 7
     lsq_tries = 40
 
@@ -24,5 +22,6 @@ def main():
 
     # outputing state parameters
     param_df_out(res, observed, city_meta[cities[0]])
+
 
 main()
