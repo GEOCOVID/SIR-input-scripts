@@ -24,7 +24,7 @@ def param_df_out(data, observations, meta):
 
     start = [y for y,x in zip(['ibgeID','city'],['id', 'name']) if meta[x]]
 
-    df = pd.DataFrame(data, columns=start+['state','population','series_length','best_cost','beta1','beta2','delta','kappa','p','gamma_asym','gamma_sym','ha','gamma_H','gamma_U','t_thresh','ksi','mi_H','mi_U','omega_H','initial_I_asym','initial_I_sym','initial_E','S','I_asym','I_sym','E','H','U','R','D','Nw'])
+    df = pd.DataFrame(data, columns=start+['state','population','series_length','best_cost','beta1','beta2','delta','kappa','p','gamma_asym','gamma_sym','ha','gamma_H','gamma_U','t_thresh','ksi','mi_H','mi_U','omega_H','omega_U','initial_I_asym','initial_I_sym','initial_E','S','I_asym','I_sym','E','H','U','R','D','Nw'])
 
     # getting any city (suposing everyone has the same last date)
     id = meta['id'] if meta['id'] else meta['state']

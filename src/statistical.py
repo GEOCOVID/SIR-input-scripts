@@ -11,7 +11,7 @@ def beta_fun(t, t_thresh, beta1, beta2): # trying to avoid numpy overflow
     return beta1 if t < t_thresh else beta2
 
 # def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
-def ode(vars, t, beta1, beta2, delta, kappa, p, gamma_asym, gamma_sym, ha, gamma_H, gamma_U, t_thresh, ksi, mi_H, mi_U, omega_H):
+def ode(vars, t, beta1, beta2, delta, kappa, p, gamma_asym, gamma_sym, ha, gamma_H, gamma_U, t_thresh, ksi, mi_H, mi_U, omega_H, omega_U):
 
     S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
 
@@ -21,13 +21,14 @@ def ode(vars, t, beta1, beta2, delta, kappa, p, gamma_asym, gamma_sym, ha, gamma
     dE = beta*S*(I_sym+delta*I_asym) - kappa*E
     dI_asym = (1-p)*kappa*E - gamma_asym*I_asym
     dI_sym = p*kappa*E - gamma_sym*I_sym
-    dH = ha*ksi*gamma_sym*I_sym + (1-mi_U)*gamma_U*U - gamma_H*H
+    # dH = ha*ksi*gamma_sym*I_sym + (1-mi_U)*gamma_U*U - gamma_H*H
+    dH = ha*ksi*gamma_sym*I_sym + (1-mi_U+omega_U*mi_U)*gamma_U*U - gamma_H*H
     # dU = ha*(1-ksi)*gamma_sym*I_sym + (1-mi_H)*omega*gamma_H*H - gamma_U*U
     dU = ha*(1-ksi)*gamma_sym*I_sym + omega_H*gamma_H*H - gamma_U*U
     # dR = gamma_asym*I_asym + (1-mi_H)*(1-omega)*gamma_H*H + (1-ha)*gamma_sym*I_sym
     dR = gamma_asym*I_asym + (1-mi_H)*(1-omega_H)*gamma_H*H + (1-ha)*gamma_sym*I_sym
     # dD = mi_H*gamma_H*H + mi_U*gamma_U*U
-    dD = (1-omega_H)*mi_H*gamma_H*H + mi_U*gamma_U*U
+    dD = (1-omega_H)*mi_H*gamma_H*H + (1-omega_U)*mi_U*gamma_U*U
     dNw = p*kappa*E
 
     return [dS, dI_asym, dI_sym, dE, dH, dU, dR, dD, dNw]
@@ -114,7 +115,8 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
         # 1/5.5, # gamma_U
         .1125, # mi_H
         .35,   # mi_U
-        .14    # omega_H
+        .14,   # omega_H
+        .29    # omega_U
     )
 
     t = np.arange(0,1+t_lth) # timespan based on days length

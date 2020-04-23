@@ -20,7 +20,7 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days):
     # plot step
     fig = plt.figure(0)
 
-    vl = plt.axvline(params[-5], c='r', ls='--', label='Start of Intervention')
+    vl = plt.axvline(params[-4], c='r', ls='--', label='Start of Intervention')
     vL = plt.axvline(t.shape[0]-extra_days, c='#6d4848', ls=':', label='Time Series Limit')
 
     # plotting Deaths
