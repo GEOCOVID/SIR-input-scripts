@@ -11,7 +11,7 @@ def beta_fun(t, t_thresh, beta1, beta2): # trying to avoid numpy overflow
     return beta1 if t < t_thresh else beta2
 
 # def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
-def ode(vars, t, beta1, beta2, delta, kappa, p, gamma_asym, gamma_sym, ha, gamma_H, gamma_U, t_thresh, ksi, mi_H, mi_U, omega_H, omega_U):
+def ode(vars, t, beta1, beta2, delta, ha, gamma_H, gamma_U, t_thresh, kappa, p, gamma_asym, gamma_sym, ksi, mi_H, mi_U, omega_H, omega_U):
 
     S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
 
@@ -90,15 +90,15 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
         [.0,           1.], # beta1
         [.0,           1.], # beta2
         # [.0,           1.], # delta
-        [.0,           .7], # delta
-        [1/6,         1/3], # kappa
-        [.13,          .5], # p
-        [1/3.7,    1/3.24], # gamma_asym
-        [1/5,         1/3], # gamma_sym
+        [.0,           1.], # delta
+        # [1/6,         1/3], # kappa
+        # [.13,          .5], # p
+        # [1/3.7,    1/3.24], # gamma_asym
+        # [1/5,         1/3], # gamma_sym
         [.05,         .25], # ha
         # [1-.35,     1-.01], # ksi
-        [1/12,        1/4], # gamma_H
-        [1/12,        1/4], # gamma_U
+        [1/12,        1/5], # gamma_H
+        [1/12,        1/5], # gamma_U
         [m[0], t_lth-m[1]], # t_thresh
         [0.,        10./N], # I_asym --> Initial Condition !!
         [0.,        10./N], # I_sym  --> Initial Condition !!
@@ -106,15 +106,15 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
     ]).T
 
     predef_param = (
-        # .25,   # kappa
-        # .15,   # p
-        # 1/3.5, # gamma_asym
-        # 1/6,   # gamma_sym
-        .5,    # ksi
+        1/4,   # kappa
+        .2,   # p
+        1/3.5, # gamma_asym
+        1/4,   # gamma_sym
+        .53,    # ksi
         # 1/9,   # gamma_H
         # 1/5.5, # gamma_U
-        .1125, # mi_H
-        .35,   # mi_U
+        .15, # mi_H
+        .4,   # mi_U
         .14,   # omega_H
         .29    # omega_U
     )
