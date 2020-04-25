@@ -29,7 +29,9 @@ def observed_data(url, removeTotal, keyIndex):
             city_lines.shape[0]           # [4] -> length of time series
         )
 
-    return cities
+    today = cities[id][0][-1] # getting last date
+
+    return cities, today
 
 def city_metadata(base, wild, i_col, renameBR):
     last_date = get_last_date(base, wild)
@@ -42,7 +44,7 @@ def city_metadata(base, wild, i_col, renameBR):
     for id in df.index:
         city_row = df.loc[id]
         metadata[id] = {
-            'pop': city_row.Pt if 'Pt' in df.columns else city_row.populacao,   # [0] -> N population scalar
+            'pop': np.int64(city_row.Pt if 'Pt' in df.columns else city_row.populacao),   # [0] -> N population scalar
             'id': id if 'id' == df.index.name else None, # [1] -> city's ibgeID
             'name': city_row.Name if 'Name' in df.columns else None, # [2] -> city's name
             'state': city_row.UF if 'UF' in df.columns else id  # [3] -> state
