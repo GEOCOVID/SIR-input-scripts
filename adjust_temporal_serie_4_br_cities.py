@@ -26,6 +26,8 @@ def main():
     # outputing state parameters
     # param_df_out(res, observed, city_meta[cities[0]])
 
+    # TODO: Verificar se todos os ids existem para o Merge ou se há falta.
+
     merge_output(cities, observed, city_meta)
 
 

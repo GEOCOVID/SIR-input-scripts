@@ -41,7 +41,7 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days):
     # s, = plt.plot(t, y[:,-9], '-', c='#f925eb', label='Stipulated Susceptible', lw=1)
 
 
-    plt.legend(loc='upper left', fontsize=5)
+    plt.legend(loc='upper left', fontsize=10)
 
     plt.xlabel('Date', fontsize=17)
     plt.ylabel('Reported cases', fontsize=17)
