@@ -88,7 +88,7 @@ def hard_work_no_queue(thr, cities, city_meta, observed, extra_days, lsq_tries):
         save_time_series(params, predef_param, containers, city_meta[city], extra_days)
 
         # writing its data into a single file
-        res = return_put(params, predef_param, best_cost, containers[-1-extra_days], city_meta[city], observed[city][4])
+        res = return_put(params, predef_param, best_cost, containers[-1-extra_days], city_meta[city], observed[city][3][-1], observed[city][4])
 
         param_df_out_single(res, city_meta[city])
 

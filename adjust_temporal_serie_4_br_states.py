@@ -8,7 +8,8 @@ from sys import exit
 def main():
 
     # collecting data
-    observed, today = observed_data('https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-states.csv', False, 'state')
+    # observed, today = observed_data('https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-states.csv', False, 'state')
+    observed, today = observed_data('geocovid_pulled_database/states.csv', False, 'state')
     city_meta = city_metadata('metadata', 'estado_sumario_', 0, True)
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
@@ -27,7 +28,7 @@ def main():
     # param_df_out(res, observed, city_meta[cities[0]])
 
     # TODO: Verificar se todos os ids existem para o Merge ou se há falta.
-    
+
     merge_output(cities, observed, city_meta)
 
 
