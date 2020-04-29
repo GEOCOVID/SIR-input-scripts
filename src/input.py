@@ -19,7 +19,8 @@ def observed_data(url, removeTotal, keyIndex):
         city_lines = raw[raw.loc[:,keyIndex] == id]
 
         # skipping time series with less than 10 points
-        if city_lines.shape[0] < 10: continue
+        if city_lines.shape[0] < 10 or city_lines.totalCases.values[-1] < 75:
+            continue
 
         cities[id] = (
             city_lines.date.values,       # [0] -> date       vector
@@ -29,7 +30,7 @@ def observed_data(url, removeTotal, keyIndex):
             city_lines.shape[0]           # [4] -> length of time series
         )
 
-    today = cities[id][0][-1] # getting last date
+    today = cities[list(cities.keys())[0]][0][-1] # getting last date
 
     return cities, today
 
