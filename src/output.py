@@ -1,3 +1,4 @@
+import operator
 import numpy as np
 import pandas as pd
 from .xonsh_py import *
@@ -78,7 +79,7 @@ def save_time_series(params, predef_param, containers, meta, extra_days):
     np.savetxt(outpath, containers, delimiter=',', newline='\n', header='S,I_A,I_S,E,H,U,R,D,Nw', fmt=['%d','%d','%d','%d','%d','%d','%d','%d','%d'])
 
 
-def merge_output(cities, observed, meta):
+def merge_output(cities, cities_nofit, observed_nofit, meta):
 
     l = []
     for id in cities:
@@ -94,5 +95,35 @@ def merge_output(cities, observed, meta):
 
     today = out_folder.today
 
+
     df = pd.concat(l)
+
+    df_nofit = create_nofit_rows(cities_nofit, observed_nofit, meta)
+
+    df = df.append(df_nofit, ignore_index=True, sort=False)
+
     df.to_csv(f'{out_folder()}/{"cities" if meta[cities[0]]["id"] else "states"}_summary_{today}.csv', index=False)
+
+def create_nofit_rows(cities_nofit, observed_nofit, meta):
+    # ibgeID, city, state, populatin, I_reported, series_length
+
+    # getting only remaining dictionaries
+    data = []
+    for id in cities_nofit:
+        if id in observed_nofit:
+            data.append(dict(
+                meta[id],
+                **{'I_reported': observed_nofit[id][3][-1],
+                'series_length': observed_nofit[id][4]}
+            ))
+        else:
+            data.append(dict(
+                meta[id],
+                **{'I_reported': 0,
+                'series_length': 0}
+            ))
+
+    df = pd.DataFrame(data)
+    df.rename(columns={'id':'ibgeID','name':'city','pop':'population'}, inplace=True)
+
+    return df

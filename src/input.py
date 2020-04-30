@@ -14,15 +14,18 @@ def observed_data(url, removeTotal, keyIndex):
     ids = set(raw[keyIndex]) # getting unique cities
 
     cities = dict()
+    cities_nofit = dict()
 
     for id in ids:
         city_lines = raw[raw.loc[:,keyIndex] == id]
 
         # skipping time series with less than 10 points
         if city_lines.shape[0] < 10 or city_lines.totalCases.values[-1] < 75:
-            continue
+            pcities = cities_nofit
+        else:
+            pcities = cities
 
-        cities[id] = (
+        pcities[id] = (
             city_lines.date.values,       # [0] -> date       vector
             city_lines.deaths.values,     # [1] -> deaths     vector
             city_lines.newCases.values,   # [2] -> newCases   vector
@@ -32,7 +35,7 @@ def observed_data(url, removeTotal, keyIndex):
 
     today = cities[list(cities.keys())[0]][0][-1] # getting last date
 
-    return cities, today
+    return cities, cities_nofit, today
 
 def city_metadata(base, wild, i_col, renameBR):
     last_date = get_last_date(base, wild)
