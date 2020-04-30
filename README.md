@@ -1,5 +1,5 @@
-# SEIHUDR-input-scripts
-Scripts and input data to feed GaGa Ninja's MATLAB code for SEIHUDR Model
+# SIR-input-scripts
+Scripts and input data to feed GaGa Ninja's MATLAB code for SIR Model
 
 Descrição:
 
