@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .output import out_folder
 from .xonsh_py import *
 
 def observed_data(url, removeTotal, keyIndex):
@@ -64,3 +65,15 @@ def get_last_date(path, wild):
     dates = [x.split('_')[-1].split('.')[0] for x in l]
     dates = np.array(list(map(np.datetime64, dates)))
     return np.max(dates)
+
+
+def get_state_params(meta, tseries_limit):
+
+    state = meta['state']
+
+    outpath = f'{out_folder()}/{state}'
+    df = pd.read_csv(f'{outpath}/summary_tsLimit={tseries_limit}.csv')
+
+    params = np.array([df.beta.values[0], df.gamma.values[0], df.initial_I.values[0]])
+
+    return params

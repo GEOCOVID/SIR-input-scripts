@@ -1,46 +1,27 @@
 import numpy as np
 import scipy.integrate as spi
 import scipy.optimize as spo
+from .input import get_state_params
 
+def ode(vars, t, beta, gamma):
 
-# def beta_fun(t, t_thresh, beta1, beta2):
-#     k = 50. # code defined variable...
-#     hh = lambda t: 1./(1.+np.exp(-2.*k*t, dtype=np.float128))
-#     return beta1*hh(t_thresh-t) + beta2*hh(t-t_thresh)
-def beta_fun(t, t_thresh, beta1, beta2): # trying to avoid numpy overflow
-    return beta1 if t < t_thresh else beta2
+    S, I, R, Nw = vars # getting variables values
 
-# def ode(vars, t, beta1, beta2, delta, ha, ksi, t_thresh, kappa, p, gamma_asym, gamma_sym, gamma_H, gamma_U, mi_H, mi_U, omega):
-def ode(vars, t, beta1, beta2, delta, ha, gamma_H, gamma_U, t_thresh, kappa, p, gamma_asym, gamma_sym, ksi, mi_H, mi_U, omega_H, omega_U):
+    dS = -beta*S*I
+    dI = beta*S*I - gamma*I
+    dR = gamma*I
 
-    S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
+    dNw = beta*S*I
 
-    beta = beta_fun(t, t_thresh, beta1, beta2)
-
-    dS = -beta*S*(I_sym+delta*I_asym)
-    dE = beta*S*(I_sym+delta*I_asym) - kappa*E
-    dI_asym = (1-p)*kappa*E - gamma_asym*I_asym
-    dI_sym = p*kappa*E - gamma_sym*I_sym
-    # dH = ha*ksi*gamma_sym*I_sym + (1-mi_U)*gamma_U*U - gamma_H*H
-    dH = ha*ksi*gamma_sym*I_sym + (1-mi_U+omega_U*mi_U)*gamma_U*U - gamma_H*H
-    # dU = ha*(1-ksi)*gamma_sym*I_sym + (1-mi_H)*omega*gamma_H*H - gamma_U*U
-    dU = ha*(1-ksi)*gamma_sym*I_sym + omega_H*gamma_H*H - gamma_U*U
-    # dR = gamma_asym*I_asym + (1-mi_H)*(1-omega)*gamma_H*H + (1-ha)*gamma_sym*I_sym
-    dR = gamma_asym*I_asym + (1-mi_H)*(1-omega_H)*gamma_H*H + (1-ha)*gamma_sym*I_sym
-    # dD = mi_H*gamma_H*H + mi_U*gamma_U*U
-    dD = (1-omega_H)*mi_H*gamma_H*H + (1-omega_U)*mi_U*gamma_U*U
-    dNw = p*kappa*E
-
-    return [dS, dI_asym, dI_sym, dE, dH, dU, dR, dD, dNw]
+    return [dS, dI, dR, dNw]
 
 
 def ode_initial_conditions(params):
 
     # ---------  Signature of variables unpacked by ode
-    # S, I_asym, I_sym, E, H, U, R, D, Nw = vars # getting variables values
+    # S, I, R, Nw = vars # getting variables values
 
-    vars0 = params[-3:]
-    vars0 = np.concatenate(([1-np.sum(vars0)], vars0, [0, 0, 0, 0, 0])) # prepending resulting Susceptible & appending lasting containers: Hospitalized, UTI, Recovered, and Dead, respectively; and Nw inital value
+    vars0 = np.array([1-params[-1],params[-1],0,0])
 
     return vars0
 
@@ -51,72 +32,43 @@ def get_containers(params, predef_param, observed, meta, t):
 
     vars0 = ode_initial_conditions(params) # getting ode random initial conditions
 
-    params = np.concatenate((params[:-3], predef_param)) # appending non randomized parameters
+    params = np.concatenate((params[:-1], predef_param))
 
     res = spi.odeint(ode, vars0, t, args=tuple(params))
 
     return res*N
 
 
-def cost_function(params, observed, meta, t, predef_param):
+def cost_function(params, observed, meta, t, predef_param, tseries_limit):
 
     # getting containers
     res = get_containers(params, predef_param, observed, meta, t)
 
     I_stipulated = res[1:,-1] # getting all integrated time series for Infections
-    D_stipulated = res[1:,-2] # getting all integrated time series for Deaths
-
     I_observed = observed[3] # temporal observed Infected population
-    D_observed = observed[1] # temporal observed Dead population
 
+    # using only limited time series for adjustment
+    I_stipulated = I_stipulated[:tseries_limit]
+    I_observed = I_observed[:tseries_limit]
 
     # getting temporal deviations for specific populations
     err_I = (I_stipulated-I_observed)/np.sqrt(I_stipulated+1)
-    err_D = (D_stipulated-D_observed)/np.sqrt(D_stipulated+1)
 
-    return np.r_[err_I, err_D]
+    return np.r_[err_I]
 
 
-def stipulation(thr, extra_days, lsq_tries, observed, meta):
+def stipulation(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
 
     N = meta['pop'] # unpacking state metadata
     t_lth = observed[4] # getting time series length
 
-    m = (5, 5) # margins after beginning and before today for intervention fitting
-    if t_lth-sum(m) <= 0:
-        m = (m[0]+(t_lth-sum(m)-.01) , m[1]) # shifting lower bound to fit inside time interval. upper bound remain intact
-
     boundaries = np.array([
-        [.0,           1.], # beta1
-        [.0,           1.], # beta2
-        # [.0,           1.], # delta
-        [.0,           1.], # delta
-        # [1/6,         1/3], # kappa
-        # [.13,          .5], # p
-        # [1/3.7,    1/3.24], # gamma_asym
-        # [1/5,         1/3], # gamma_sym
-        [.05,         .25], # ha
-        # [1-.35,     1-.01], # ksi
-        [1/12,        1/5], # gamma_H
-        [1/12,        1/5], # gamma_U
-        [m[0], t_lth-m[1]], # t_thresh
-        [0.,        10./N], # I_asym --> Initial Condition !!
-        [0.,        10./N], # I_sym  --> Initial Condition !!
-        [0.,        10./N]  # E      --> Initial Condition !!
+        [.0,        1.], # beta
+        [0.,     10./N], # I --> Initial Condition !!
     ]).T
 
     predef_param = (
-        1/4,   # kappa
-        .2,   # p
-        1/3.5, # gamma_asym
-        1/4,   # gamma_sym
-        .53,    # ksi
-        # 1/9,   # gamma_H
-        # 1/5.5, # gamma_U
-        .15, # mi_H
-        .4,   # mi_U
-        .14,   # omega_H
-        .29    # omega_U
+        1/6, # gamma
     )
 
     t = np.arange(0,1+t_lth) # timespan based on days length
@@ -129,7 +81,7 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
         params0 = np.random.rand(boundaries.shape[1])
         params0 = boundaries[0] + params0*(boundaries[1]-boundaries[0])
 
-        res = spo.least_squares(cost_function, params0, bounds=boundaries, kwargs={'observed':observed, 'meta':meta, 't':t, 'predef_param':predef_param})
+        res = spo.least_squares(cost_function, params0, bounds=boundaries, kwargs={'observed':observed, 'meta':meta, 't':t, 'predef_param':predef_param, 'tseries_limit':tseries_limit})
 
         if res.status > 0 and best_cost > res.cost: # accepting only better converged parameters
             best_cost   = res.cost
@@ -140,5 +92,33 @@ def stipulation(thr, extra_days, lsq_tries, observed, meta):
     t = np.arange(0,1+extra_days+t_lth) # timespan based on days length and a week ahead
     # getting containers
     containers = get_containers(best_params, predef_param, observed, meta, t)
+
+    return best_params, predef_param, best_cost, containers
+
+
+def stipulation_city(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
+
+    best_params = get_state_params(meta, tseries_limit)
+    predef_param = (
+        best_params[1], # getting state gamma
+    )
+
+    N = meta['pop'] # unpacking state metadata
+    # fixing initial condition for city's first case instead of state's one
+    # and removing predefined params
+    best_params = np.array([best_params[0], observed[3][0]/N])
+    # best_params = np.array([best_params[0], best_params[2]])
+
+    t_lth = observed[4] # getting time series length
+
+    # t = np.arange(0,1+extra_days+t_lth) # timespan based on days length and a week ahead
+    t = np.arange(1,1+extra_days+t_lth) # timespan based on days length and a week ahead
+
+    # getting containers
+    containers = get_containers(best_params, predef_param, observed, meta, t)
+    # prepending data before initial report
+    containers = np.concatenate(([[N,0,0,0]], containers))
+
+    best_cost = np.nan
 
     return best_params, predef_param, best_cost, containers
