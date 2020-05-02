@@ -20,8 +20,10 @@ def main():
     out_folder.today = today
 
     n_thread = 4
-    extra_days = 7 # VER FORMA DE USAR O EXTRA DAYS PARA DAR RESULTADOS PREVISTOS ATÉ O DIA DE HOJE!!!!!!!!!!!!!!!!!!!!
     lsq_tries = 40
+
+    padding = (np.datetime64('today')-np.datetime64(today)).astype(np.int64)
+    extra_days = padding+7
 
     res = parallelizer_no_queue(n_thread, cities, city_meta, observed, extra_days, lsq_tries)
     # TODO: Verificar se todos os ids existem para o Merge ou se há falta.
