@@ -34,7 +34,8 @@ def observed_data(url, removeTotal, keyIndex):
             city_lines.shape[0]           # [4] -> length of time series
         )
 
-    today = cities[list(cities.keys())[0]][0][-1] # getting last date
+    # getting last date
+    today = np.array(list(set(raw.date)),dtype=np.datetime64).max()
 
     return cities, cities_nofit, today
 
@@ -67,12 +68,12 @@ def get_last_date(path, wild):
     return np.max(dates)
 
 
-def get_state_params(meta, tseries_limit):
+def get_state_params(meta):
 
     state = meta['state']
 
     outpath = f'{out_folder()}/{state}'
-    df = pd.read_csv(f'{outpath}/summary_tsLimit={tseries_limit}.csv')
+    df = pd.read_csv(f'{outpath}/summary.csv')
 
     params = np.array([df.beta.values[0], df.gamma.values[0], df.initial_I.values[0]])
 

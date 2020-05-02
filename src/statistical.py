@@ -39,7 +39,7 @@ def get_containers(params, predef_param, observed, meta, t):
     return res*N
 
 
-def cost_function(params, observed, meta, t, predef_param, tseries_limit):
+def cost_function(params, observed, meta, t, predef_param):
 
     # getting containers
     res = get_containers(params, predef_param, observed, meta, t)
@@ -47,17 +47,13 @@ def cost_function(params, observed, meta, t, predef_param, tseries_limit):
     I_stipulated = res[1:,-1] # getting all integrated time series for Infections
     I_observed = observed[3] # temporal observed Infected population
 
-    # using only limited time series for adjustment
-    I_stipulated = I_stipulated[:tseries_limit]
-    I_observed = I_observed[:tseries_limit]
-
     # getting temporal deviations for specific populations
     err_I = (I_stipulated-I_observed)/np.sqrt(I_stipulated+1)
 
     return np.r_[err_I]
 
 
-def stipulation(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
+def stipulation(thr, extra_days, lsq_tries, observed, meta):
 
     N = meta['pop'] # unpacking state metadata
     t_lth = observed[4] # getting time series length
@@ -81,7 +77,7 @@ def stipulation(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
         params0 = np.random.rand(boundaries.shape[1])
         params0 = boundaries[0] + params0*(boundaries[1]-boundaries[0])
 
-        res = spo.least_squares(cost_function, params0, bounds=boundaries, kwargs={'observed':observed, 'meta':meta, 't':t, 'predef_param':predef_param, 'tseries_limit':tseries_limit})
+        res = spo.least_squares(cost_function, params0, bounds=boundaries, kwargs={'observed':observed, 'meta':meta, 't':t, 'predef_param':predef_param})
 
         if res.status > 0 and best_cost > res.cost: # accepting only better converged parameters
             best_cost   = res.cost
@@ -96,9 +92,9 @@ def stipulation(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
     return best_params, predef_param, best_cost, containers
 
 
-def stipulation_city(thr, extra_days, lsq_tries, tseries_limit, observed, meta):
+def stipulation_city(thr, extra_days, lsq_tries, observed, meta):
 
-    best_params = get_state_params(meta, tseries_limit)
+    best_params = get_state_params(meta)
     predef_param = (
         best_params[1], # getting state gamma
     )

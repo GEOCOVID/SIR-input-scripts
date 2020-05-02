@@ -22,19 +22,10 @@ def main():
     n_thread = 4
     extra_days = 7
     lsq_tries = 40
-    tseries_limit = None
 
-    res = parallelizer_no_queue(n_thread, cities, city_meta, observed, extra_days, lsq_tries, tseries_limit)
+    res = parallelizer_no_queue(n_thread, cities, city_meta, observed, extra_days, lsq_tries)
     # TODO: Verificar se todos os ids existem para o Merge ou se há falta.
-    merge_output(cities, cities_nofit, observed_nofit, city_meta, tseries_limit)
-
-
-    # running with limited time series for accuracy tests
-    tseries_limit = 30
-
-    res = parallelizer_no_queue(n_thread, cities, city_meta, observed, extra_days, lsq_tries, tseries_limit)
-    # TODO: Verificar se todos os ids existem para o Merge ou se há falta.
-    merge_output(cities, cities_nofit, observed_nofit, city_meta, tseries_limit)
+    merge_output(cities, cities_nofit, observed_nofit, city_meta)
 
 
 main()

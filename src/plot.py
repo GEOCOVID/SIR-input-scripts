@@ -6,23 +6,19 @@ from .xonsh_py import *
 from .output import out_folder
 
 
-def plot_compare(params, predef_param, containers, observed, meta, extra_days, tseries_limit):
+def plot_compare(params, predef_param, containers, observed, meta, extra_days):
 
     N = meta['pop']; id = meta['id']; city = meta['name']; state = meta['state']
 
     y = containers[1:]
     t = np.arange(1,1+y.shape[0]) # timespan based on days length
 
-    deaths = np.nonzero(observed[1])[0]
-    ini = deaths[0] if len(deaths) else -1
     dates = observed[0]
 
     # plot step
     fig = plt.figure(0)
 
 
-    if tseries_limit:
-        vl = plt.axvline(1+tseries_limit, c='#16af54', ls=':', label='Limit of Adjustment')
     vL = plt.axvline(t.shape[0]-extra_days, c='#6d4848', ls=':', label='Time Series Limit')
 
     si, = plt.plot(t, y[:,-1], '-b', label='Stipulated Infection', lw=1)
@@ -51,17 +47,16 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days, t
 
     outpath = f'{out_folder()}/{state}{"" if city == None else "/"+city}'
     mkdir_p([outpath])
-    plt.savefig(f'{outpath}/english_tsLimit={tseries_limit}.svg',dpi=600)
+    plt.savefig(f'{outpath}/english.svg',dpi=600)
 
     # relabeling in portuguese
     si.set_label('Infecções Estipuladas')
     oi.set_label('Infecções Reportadas')
-    if tseries_limit: vl.set_label('Limite do Ajuste')
     vL.set_label('Fim da Série Temporal')
     plt.legend(loc='upper left', fontsize=10)
     plt.xlabel('Data', fontsize=17)
     plt.ylabel('Casos Reportados', fontsize=17)
     plt.title(f'Covid-19 - {"" if city == None else city+"/"}{state}')
-    plt.savefig(f'{outpath}/portuguese_tsLimit={tseries_limit}.svg',dpi=600)
+    plt.savefig(f'{outpath}/portuguese.svg',dpi=600)
 
     plt.close(fig)

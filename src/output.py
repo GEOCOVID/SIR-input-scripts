@@ -9,12 +9,12 @@ from .xonsh_py import *
 def out_folder():
     return f'output/{out_folder.today}'
 
-def check_done_work(meta, tseries_limit):
+def check_done_work(meta):
     city = meta['name']; state = meta['state']
 
     outpath = f'{out_folder()}/{state}{"/"+city if city else ""}'
 
-    return existOldData(f'{outpath}/summary_tsLimit={tseries_limit}.csv')
+    return existOldData(f'{outpath}/summary.csv')
 
 
 def return_put(params, predef_param, best_cost, containers, meta, I_rep, t_lth):
@@ -28,7 +28,7 @@ def return_put(params, predef_param, best_cost, containers, meta, I_rep, t_lth):
     return data
 
 
-def param_df_out_single(data, meta, tseries_limit):
+def param_df_out_single(data, meta):
 
     city = meta['name']; state = meta['state']
 
@@ -46,19 +46,19 @@ def param_df_out_single(data, meta, tseries_limit):
 
     df.set_index('ibgeID' if meta['id'] else 'state', inplace=True)
     df.sort_index(inplace=True)
-    df.to_csv(f'{outpath}/summary_tsLimit={tseries_limit}.csv')
+    df.to_csv(f'{outpath}/summary.csv')
 
 
-def save_time_series(params, predef_param, containers, meta, extra_days, tseries_limit):
+def save_time_series(params, predef_param, containers, meta, extra_days):
 
     city = meta['name']; state = meta['state']
 
-    outpath = f'{out_folder()}/{state}{"/"+city if city else ""}/time_series_extraDays={extra_days}_tsLimit={tseries_limit}.csv'
+    outpath = f'{out_folder()}/{state}{"/"+city if city else ""}/time_series_extraDays={extra_days}.csv'
 
     np.savetxt(outpath, containers, delimiter=',', newline='\n', header='S,I,R,Nw', fmt=['%d','%d','%d','%d'])
 
 
-def merge_output(cities, cities_nofit, observed_nofit, meta, tseries_limit):
+def merge_output(cities, cities_nofit, observed_nofit, meta):
 
     l = []
     for id in cities:
@@ -67,23 +67,26 @@ def merge_output(cities, cities_nofit, observed_nofit, meta, tseries_limit):
         state = meta[id]['state']
 
         outpath = f'{out_folder()}/{state}{"/"+city if city else ""}'
-        df = pd.read_csv(f'{outpath}/summary_tsLimit={tseries_limit}.csv')
+        df = pd.read_csv(f'{outpath}/summary.csv')
 
         l.append(df)
 
 
     today = out_folder.today
 
+    df = pd.concat(l) if l else pd.DataFrame()
 
-    df = pd.concat(l)
-
-    df_nofit = create_nofit_rows(cities_nofit, observed_nofit, meta)
+    df_nofit = create_nofit_rows(cities, cities_nofit, observed_nofit, meta)
 
     df = df.append(df_nofit, ignore_index=True, sort=False)
 
-    df.to_csv(f'{out_folder()}/{"cities" if meta[cities[0]]["id"] else "states"}_summary_{today}_tsLimit={tseries_limit}.csv', index=False)
+    outpath = f'{out_folder()}'
+    mkdir_p([outpath])
+    cid = cities_nofit[0] if len(cities_nofit) else cities[0]
+    df.to_csv(f'{outpath}/{"cities" if meta[cid]["id"] else "states"}_summary_{today}.csv', index=False)
 
-def create_nofit_rows(cities_nofit, observed_nofit, meta):
+
+def create_nofit_rows(cities, cities_nofit, observed_nofit, meta):
     # ibgeID, city, state, populatin, I_reported, series_length
 
     # getting only remaining dictionaries
@@ -103,6 +106,9 @@ def create_nofit_rows(cities_nofit, observed_nofit, meta):
             ))
 
     df = pd.DataFrame(data)
+    cid = cities_nofit[0] if len(cities_nofit) else cities[0]
+    if not meta[cid]['id'] and df.shape[0]:
+        df.drop(axis=1,columns=['id','name'], inplace=True)
     df.rename(columns={'id':'ibgeID','name':'city','pop':'population'}, inplace=True)
 
     return df
