@@ -23,7 +23,7 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days):
 
     si, = plt.plot(t, y[:,-1], '-b', label='Stipulated Infection', lw=1)
     oi, = plt.plot(t[:-extra_days], observed[3], '.k', label='Observed Infection', ms=5)
-    r, = plt.plot(t, y[:,2], '-g', label='Stipulated Recovery', lw=1)
+    sr, = plt.plot(t, y[:,2], '-g', label='Stipulated Recovery', lw=1)
 
 
     plt.legend(loc='upper left', fontsize=10)
@@ -33,11 +33,9 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days):
 
     plt.title(f'Covid-19 - {"" if city == None else city+"/"}{state}')
 
-
-
     ratio = dates.size/(dates.size+extra_days)
-    l = np.int32(np.floor(np.linspace(0, dates.size-1, np.floor(ratio*22))))
-    L = np.int32(np.ceil(np.linspace(0, extra_days, np.ceil((1-ratio)*22))[1:]))
+    l = np.int32(np.floor(np.linspace(0, dates.size-1, np.int32(np.floor(ratio*22)))))
+    L = np.int32(np.ceil(np.linspace(0, extra_days, np.int32(np.ceil((1-ratio)*22)))[1:]))
     ex_dates = [str(np.datetime64(dates[-1])+np.timedelta64(x,'D')) for x in L]
 
     ticks = np.r_[t[l],t[L-extra_days-1]]
@@ -55,6 +53,7 @@ def plot_compare(params, predef_param, containers, observed, meta, extra_days):
     # relabeling in portuguese
     si.set_label('Infecções Estipuladas')
     oi.set_label('Infecções Reportadas')
+    sr.set_label('Recuperados Estipulados')
     vL.set_label('Fim da Série Temporal')
     plt.legend(loc='upper left', fontsize=10)
     plt.xlabel('Data', fontsize=17)
