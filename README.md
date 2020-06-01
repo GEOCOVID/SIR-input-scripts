@@ -1,12 +1,20 @@
 # SIR-input-scripts
-Scripts and input data to feed GaGa Ninja's MATLAB code for SIR Model
+Scripts to feed the MATLAB code for SIR Model. This code is integrating part of the software resources published in the paper __<link to the paper/DOI here>__.
 
-Descrição:
+### Description:
 
-**adjust_temporal_serie_4_br_states.py** -> Script que consome a mais atual série temporal dos estados de Wesley e o arquivo "estado_sumario". Gera o set de parâmetros para o modelo de EDOs com fitting de alguns e também condições iniciais. Gera também gráficos bonitinhos comparando a curva fittada com os pontos observados.
+Both scripts `adjust_temporal_serie_4_br_states.py` and `adjust_temporal_serie_4_br_cities.py` fit the parameters for each city/state individually for the given input files (which obey the wcota repository csv structure).
 
-**generate_pop_municipalities.py** -> Script que consome a mais atual série temporal das cidades de Wesley e o arquivo "popBR_". Gera uma planilha com os valores das variáveis do Modelo preditos por ele para o dia em que o programa foi rodado, com base no começo da série temporal que cada cidade possui.
+In order to execute the code run on paper, one should rename files inside `input` folder so they have no date before the file extension, i.e., `cities.csv` and `states.csv`. In other hand, the user can edit the first argument to the call `observed_data` at line 12 of both scripts to match the desired input file.
 
-#### Principal:
+Each script outputs the parameters, the fitted time series csv and a graph of fitted vs. target curve in a svg file. Everything goes into the `output` folder and is organized based on the city/state to which it relates to. For ex., all Salvador outputs will be written into the following path `output/BA/Salvador/`, as Salvador is a city from Bahia (BA). Bahia therefore will have its outputs written into `output/BA/`, as it's a Federative State, which contains cities.
 
-**adjust_temporal_serie_4_br_cities.py** -> Script que consome a mais atual série temporal das cidades de Wesley e o arquivo "popBR_". Gera uma planilha contendo as seguintes informações para cada cidade com infecções acima de 7 dias: identificações da cidade, população, parâmetros do modelo SEIHUDR fitados para a série temporal da cidade, condições iniciais para alguns containers um dia antes do reporte de infecção, e containers estipulados para o último dia da série temporal (com base nos parâmetros fitados).
+### Requirements:
+
+All codes were tested under Python 3.8.2 environment with the latest following packages offered by the conda package manager at the time of development: numpy, scipy, matplotlib, seaborn and pandas
+
+In order to execute this repository codes, one must install the aforementioned packages to your working environment. For instance, `python -m pip install numpy scipy matplotlib seaborn pandas`.
+
+### Execution:
+
+In order to execute, the user must first install all `Requirements` and rename the input files (or edit the line 12 in scripts) and then execute the python scripts inside the root folder. A common execution command line would be: `python adjust_temporal_serie_4_br_states.py` or `python adjust_temporal_serie_4_br_cities.py`.
