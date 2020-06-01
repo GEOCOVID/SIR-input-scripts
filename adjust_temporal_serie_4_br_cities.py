@@ -9,7 +9,7 @@ def main():
 
     # collecting data
     # observed, today = observed_data('https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv', True, 'ibgeID')
-    observed, observed_nofit, today = observed_data('geocovid_pulled_database/cities.csv', True, 'ibgeID')
+    observed, observed_nofit, today = observed_data('input/cities.csv', True, 'ibgeID')
     city_meta = city_metadata('metadata', 'popBR_', 1, False)
 
     cities = np.array(list(set(observed.keys()) & set(city_meta.keys())))
