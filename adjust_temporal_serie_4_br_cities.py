@@ -22,7 +22,8 @@ def main():
     n_thread = 4
     lsq_tries = 40
 
-    padding = (np.datetime64('today')-np.datetime64(today)).astype(np.int64)
+    #padding = (np.datetime64('today')-np.datetime64(today)).astype(np.int64)
+    padding=0
     extra_days = padding+7
 
     res = parallelizer_no_queue(n_thread, cities, city_meta, observed, extra_days, lsq_tries)
