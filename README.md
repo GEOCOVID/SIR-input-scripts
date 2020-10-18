@@ -18,3 +18,9 @@ In order to execute this repository codes, one must install the aforementioned p
 ### Execution:
 
 In order to execute, the user must first install all `Requirements` and rename the input files (or edit the line 12 in scripts) and then execute the python scripts inside the root folder. A common execution command line would be: `python adjust_temporal_serie_4_br_states.py` or `python adjust_temporal_serie_4_br_cities.py`.
+
+### Paper data:
+
+The input tables are in the `input` folder. Each table has its data untill the written date in its filename. `cities` or `states` at the beginning of the filename determines what data the file contains. Have a look inside them.
+
+The output data in saved in the `output` folder. We've already put the generated data for the paper into this repository. One should walk through the directory-tree to understand how it's structured and how the fitting worked. It's pretty easy.
